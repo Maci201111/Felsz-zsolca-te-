@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>FZS ÖTE - Miskolc Riasztáskezelő</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.tilelayer.windbarb"></script>
+
+  <style>
+    :root {
+      --bg: #080b10;
+      --panel: #121821;
+      --panel-2: #18212c;
+      --panel-3: #0f141c;
+      --line: #2d3948;
+      --text: #ecf2f8;
+      --muted: #9cb0c6;
+      --red: #c1121f;
+      --red-dark: #8f1019;
+      --amber: #ffb703;
+      --green: #2a9d8f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(193, 18, 31, 0.16), transparent 24%),
+        linear-gradient(180deg, #11151b 0%, #07090d 100%);
+      min-height: 100vh;
+    }
+
+    .app-shell.hidden {
+      display: none;
+    }
+
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-screen.hidden {
+      display: none;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        linear-gradient(180deg, rgba(24, 33, 44, 0.98), rgba(11, 15, 22, 0.98));
+      box-shadow: 0 24px 44px rgba(0, 0, 0, 0.28);
+      overflow: hidden;
+    }
+
+    .login-top {
+      padding: 28px 24px 22px;
+      background:
+        linear-gradient(135deg, rgba(193, 18, 31, 0.98), rgba(120, 14, 23, 0.98)),
+        linear-gradient(90deg, #49070d, #a3121d);
+    }
+
+    .login-top h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .login-top p {
+      margin: 0;
+      color: rgba(255,255,255,0.82);
+    }
+
+    .login-body {
+      padding: 24px;
+    }
+
+    .login-field {
+      margin-bottom: 16px;
+    }
+
+    .login-field label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #dce8f3;
+    }
+
+    .login-field input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #0f141c;
+      color: #ffffff;
+      font-size: 15px;
+    }
+
+    .login-field input:focus {
+      outline: none;
+      border-color: rgba(255, 183, 3, 0.45);
+      box-shadow: 0 0 0 4px rgba(255, 183, 3, 0.08);
+    }
+
+    .login-button {
+      width: 100%;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--red), var(--red-dark));
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(193, 18, 31, 0.24);
+    }
+
+    .login-error {
+      margin-top: 14px;
+      color: #ffb4ba;
+      min-height: 20px;
+      font-size: 14px;
+    }
+
+    header {
+      position: relative;
+      padding: 28px 24px 22px;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background:
+        linear-gradient(135deg, rgba(193, 18, 31, 0.98), rgba(120, 14, 23, 0.98)),
+        linear-gradient(90deg, #49070d, #a3121d);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    header::after {
+      content: "RIASZTÁSKEZELŐ KÖZPONT";
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      letter-spacing: 0.35em;
+      color: rgba(255, 255, 255, 0.76);
+    }
+
+    .top-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 24px;
+      background: rgba(10, 14, 20, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .status-strip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #161d27;
+      color: var(--muted);
+    }
+
+    .pill.alert {
+      background: rgba(193, 18, 31, 0.15);
+      color: #ffd5d8;
+      border-color: rgba(193, 18, 31, 0.38);
+    }
+
+    .pill.ready {
+      background: rgba(42, 157, 143, 0.15);
+      color: #bff7f0;
+      border-color: rgba(42, 157, 143, 0.3);
+    }
+
+    .user-panel {
+      text-align: right;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 16px 24px;
+      background: rgba(13, 18, 25, 0.94);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      padding: 11px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: linear-gradient(180deg, #222c38, #18202a);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    nav a:hover {
+      transform: translateY(-1px);
+      background: linear-gradient(180deg, #bf1b28, #8f1019);
+      border-color: rgba(255, 183, 3, 0.5);
+    }
+
+    .container {
+      display: flex;
+      gap: 20px;
+      padding: 24px;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .active {
+      display: flex;
+    }
+
+    .left-panel,
+    .right-panel {
+      padding: 22px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
+    }
+
+    .left-panel {
+      width: 60%;
+      background:
+        linear-gradient(180deg, rgba(24, 33, 44, 0.98), rgba(15, 20, 28, 0.98));
+    }
+
+    .right-panel {
+      width: 40%;
+      background:
+        linear-gradient(180deg, rgba(20, 27, 36, 0.98), rgba(11, 15, 22, 0.98));
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .section-title::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--amber);
+      box-shadow: 0 0 12px rgba(255, 183, 3, 0.55);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-card,
+    .info-card {
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      padding: 18px;
+    }
+
+    .hero-label {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-value {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .subline {
+      margin-top: 10px;
+      color: #c8d6e5;
+    }
+
+    .alert-box {
+      background: linear-gradient(135deg, rgba(193, 18, 31, 0.22), rgba(123, 16, 25, 0.2));
+      padding: 14px 16px;
+      margin-top: 14px;
+      border-left: 5px solid var(--amber);
+      border-radius: 16px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 16px;
+      background: rgba(8, 11, 16, 0.4);
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    th,
+    td {
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background: rgba(193, 18, 31, 0.18);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 13px;
+    }
+
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0f141c;
+      color: var(--text);
+    }
+
+    textarea:focus,
+    input[type="text"]:focus {
+      outline: none;
+      border-color: rgba(255, 183, 3, 0.45);
+      box-shadow: 0 0 0 4px rgba(255, 183, 3, 0.08);
+    }
+
+    .action-button,
+    .soundboard button,
+    .status-button,
+    #toggleMicBtn {
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    .action-button {
+      padding: 13px 18px;
+      background: linear-gradient(135deg, var(--red), var(--red-dark));
+      box-shadow: 0 12px 24px rgba(193, 18, 31, 0.24);
+    }
+
+    .soundboard {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .soundboard button {
+      padding: 11px 16px;
+      background: linear-gradient(180deg, #243140, #17212d);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .soundboard button:hover,
+    .action-button:hover,
+    #toggleMicBtn:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    #mapid,
+    #weathermap {
+      width: 100%;
+      height: 400px;
+      margin-top: 10px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .status-button {
+      padding: 8px 10px;
+      margin: 2px;
+      min-width: 96px;
+    }
+
+    .status-button.warning {
+      color: #000000;
+    }
+
+    .status-button.is-active {
+      outline: 3px solid #ffffff;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    .dashboard-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .dashboard-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #dbe7f3;
+    }
+
+    .dashboard-item strong {
+      color: #fff;
+    }
+
+    .alerts-layout {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 18px;
+      width: 100%;
+    }
+
+    .alert-list,
+    .alert-detail {
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      padding: 18px;
+    }
+
+    .alert-items {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .alert-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .alert-open {
+      width: 100%;
+      text-align: left;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #121923;
+      color: #ecf2f8;
+      cursor: pointer;
+    }
+
+    .alert-item.active .alert-open {
+      border-color: rgba(255, 183, 3, 0.55);
+      background: rgba(193, 18, 31, 0.16);
+    }
+
+    .alert-open strong,
+    .alert-detail strong {
+      display: block;
+      color: #ffffff;
+    }
+
+    .alert-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .alert-preview {
+      color: #dbe7f3;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    .alert-delete {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #7f1018, #5d0c12);
+      color: #ffffff;
+      padding: 0 14px;
+      cursor: pointer;
+      font-weight: 700;
+      min-width: 84px;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .detail-row {
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 12px 14px;
+    }
+
+    .detail-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      color: #ffffff;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty-alerts {
+      color: var(--muted);
+      padding: 14px 0;
+    }
+
+    hr {
+      width: 100%;
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 12px 0 4px;
+    }
+
+    @media (max-width: 980px) {
+      .container,
+      .active,
+      .hero-grid {
+        flex-direction: column;
+        grid-template-columns: 1fr;
+      }
+
+      .left-panel,
+      .right-panel {
+        width: 100%;
+      }
+
+      .top-status {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .alerts-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-top">
+      <h1>Bejelentkezési Portál</h1>
+      <p>Belépés után megnyílik az Untilted-1 riasztáskezelő felület.</p>
+    </div>
+    <div class="login-body">
+      <form id="loginForm">
+        <div class="login-field">
+          <label for="usernameInput">Felhasználónév</label>
+          <input id="usernameInput" type="text" autocomplete="username">
+        </div>
+        <div class="login-field">
+          <label for="passwordInput">Jelszó</label>
+          <input id="passwordInput" type="password" autocomplete="current-password">
+        </div>
+        <button class="login-button" type="submit">Belépés</button>
+        <div id="loginError" class="login-error"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="appShell" class="app-shell hidden">
+<header>FZS ÖTE - Felsőzsolca Riasztáskezelő Rendszer</header>
+
+<div class="top-status">
+  <div class="status-strip">
+    <span class="pill alert">Riasztási rendszer</span>
+    <span class="pill ready">Szolgálat aktív</span>
+    <span class="pill">Felsőzsolca ÖTE</span>
+  </div>
+  <div class="user-panel">
+    <span id="loggedInUser">Bejelentkezve: -</span><br>
+    <span id="lastLogin">Utolsó bejelentkezés: -</span>
+  </div>
+</div>
+
+<nav>
+  <a onclick="showPanel('home')">Főoldal</a>
+  <a onclick="showPanel('alerts')">Riasztások</a>
+  <a onclick="showPanel('weather')">Meteorológia</a>
+  <a onclick="showPanel('units')">Egységek</a>
+  <a onclick="showPanel('soundboard')">Hangpanel</a>
+</nav>
+
+<!-- FŐOLDAL -->
+<div class="container panel active" id="home">
+  <div class="left-panel">
+    <div class="section-title">Felsőzsolca ÖTE</div>
+    <div class="hero-grid">
+      <div class="hero-card">
+        <div class="hero-label">Aktuális készültség</div>
+        <div class="hero-value">Riasztásra kész</div>
+        <div class="subline">Feladat ellátási helyszín: <strong>Felsőzsolca, Bem József utca 12.</strong></div>
+      </div>
+      <div class="info-card">
+        <div class="hero-label">Műveletirányítás</div>
+        <div><strong>Készenléti szint:</strong> Teljes</div>
+        <div class="subline"><strong>Kiemelt terület:</strong> Felsőzsolca és körzete</div>
+      </div>
+    </div>
+    <div id="mapid"></div>
+    <div class="alert-box">Elsődleges vonulási körzet: Felsőzsolca</div>
+  </div>
+
+  <div class="right-panel">
+    <div class="section-title">Műveleti adatok</div>
+    <p><strong>Egység:</strong> Felsőzsolca ÖTE</p>
+    <p><strong>Koordinátor:</strong> Havas Nándor</p>
+    <div class="dashboard-list">
+      <div class="dashboard-item">
+        <span>Vonulásra kész járművek</span>
+        <strong id="readyVehicleCount">4</strong>
+      </div>
+      <div class="dashboard-item">
+        <span>Kiemelt riasztási szint</span>
+        <strong>I. fokozat</strong>
+      </div>
+      <div class="dashboard-item">
+        <span>Ügyeleti állapot</span>
+        <strong>Stabil</strong>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- RIASZTÁSOK -->
+<div class="container panel" id="alerts">
+  <div class="left-panel">
+    <div class="section-title">Új Riasztási Lap</div>
+    <form action="riasztasilap.html" method="get" target="_blank" rel="noopener noreferrer">
+      <button class="action-button" type="submit">
+        Riasztási lap
+      </button>
+    </form>
+    <div class="alerts-layout" style="margin-top:18px;">
+      <div class="alert-list">
+        <div class="section-title">Beérkezett riasztások</div>
+        <div id="alertItems" class="alert-items"></div>
+      </div>
+      <div class="alert-detail">
+        <div class="section-title">Riasztási lap adatai</div>
+        <div id="alertDetail" class="empty-alerts">Még nincs kiválasztott riasztás.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- METEOROLÓGIA -->
+<div class="container panel" id="weather">
+  <div class="left-panel">
+    <div class="section-title">Meteorológiai térkép</div>
+    <iframe
+      id="weathermap"
+      src="https://embed.windy.com/embed2.html?lat=48.1&lon=20.8&zoom=8&level=surface&overlay=wind"
+      frameborder="0">
+    </iframe>
+  </div>
+</div>
+
+<!-- EGYSÉGEK -->
+<div class="container panel" id="units">
+  <div class="left-panel">
+    <div class="section-title">Egység kiosztás</div>
+
+    <table id="unitsTable">
+      <tr>
+        <th>Egység neve</th>
+        <th>Feladat</th>
+        <th>Státusz</th>
+      </tr>
+
+      <tr>
+        <td><input type="text" value="Felsőzsolca/1"></td>
+        <td><input type="text" value="Tűzoltás"></td>
+        <td>
+          <button class="status-button" style="background-color: green;" onclick="changeStatus(this)">Bázison</button>
+          <button class="status-button warning" style="background-color: yellow;" onclick="changeStatus(this)">Menetben</button>
+          <button class="status-button" style="background-color: red;" onclick="changeStatus(this)">Helyszínen</button>
+          <button class="status-button" style="background-color: black;" onclick="changeStatus(this)">Szolgálaton kívül</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="text" value="Felsőzsolca/2"></td>
+        <td><input type="text" value="Tűzoltás"></td>
+        <td>
+          <button class="status-button" style="background-color: green;" onclick="changeStatus(this)">Bázison</button>
+          <button class="status-button warning" style="background-color: yellow;" onclick="changeStatus(this)">Menetben</button>
+          <button class="status-button" style="background-color: red;" onclick="changeStatus(this)">Helyszínen</button>
+          <button class="status-button" style="background-color: black;" onclick="changeStatus(this)">Szolgálaton kívül</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="text" value="Felsőzsolca/Erdő"></td>
+        <td><input type="text" value="Erdőtűz / kültéri beavatkozás"></td>
+        <td>
+          <button class="status-button" style="background-color: green;" onclick="changeStatus(this)">Bázison</button>
+          <button class="status-button warning" style="background-color: yellow;" onclick="changeStatus(this)">Menetben</button>
+          <button class="status-button" style="background-color: red;" onclick="changeStatus(this)">Helyszínen</button>
+          <button class="status-button" style="background-color: black;" onclick="changeStatus(this)">Szolgálaton kívül</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="text" value="Felsőzsolca/Emelő"></td>
+        <td><input type="text" value="Tűzoltás"></td>
+        <td>
+          <button class="status-button" style="background-color: green;" onclick="changeStatus(this)">Bázison</button>
+          <button class="status-button warning" style="background-color: yellow;" onclick="changeStatus(this)">Menetben</button>
+          <button class="status-button" style="background-color: red;" onclick="changeStatus(this)">Helyszínen</button>
+          <button class="status-button" style="background-color: black;" onclick="changeStatus(this)">Szolgálaton kívül</button>
+        </td>
+      </tr>
+    </table>
+
+    <button class="action-button" onclick="addUnitRow()" style="margin-top:10px; background: linear-gradient(135deg, #1b8a5a, #126b45); box-shadow: 0 12px 24px rgba(18, 107, 69, 0.24);">
+      + Új egység
+    </button>
+  </div>
+</div>
+
+<!-- HANGPANEL -->
+<div class="container panel" id="soundboard">
+  <div class="left-panel">
+    <div class="section-title">Hangpanel</div>
+
+    <div class="soundboard">
+      <button onclick="playSound('sound1')">FZS1</button>
+      <button onclick="playSound('sound2')">FZS2</button>
+      <button onclick="playSound('sound3')">FZS3</button>
+      <button onclick="playSound('sound4')">Vízszállító</button>
+      <button onclick="playSound('sound5')">Emelő kosár</button>
+      <button onclick="playSound('sound6')">Tartalék</button>
+      <button onclick="playSound('sound7')">Műszaki</button>
+      <button onclick="playSound('sound8')">Kürt</button>
+      <button onclick="playSound('sound9')">Műszaki mentéshez</button>
+      <button onclick="playSound('sound10')">Tűzesethez</button>
+      <button onclick="playSound('sound11')">Risztás(UVSZ)</button>
+      <button onclick="playSound('sound12')">Risztás(EMD)</button>
+      <button onclick="playSound('sound13')">Visszaszámlálás</button>
+      <button onclick="playSound('sound14')">Váltás kezdete</button>
+      <button onclick="playSound('sound15')">Figyelem</button>
+      <hr>
+      <button id="toggleMicBtn">🎙️ Mikrofon bekapcsolása</button>
+    </div>
+  </div>
+</div>
+
+<!-- HANGOK -->
+<audio id="sound1" src="Riasztás Weboldal/1 fecs.mp3"></audio>
+<audio id="sound2" src="Riasztás Weboldal/2 fecs.mp3"></audio>
+<audio id="sound3" src="Riasztás Weboldal/3as-fecskendő.ogg"></audio>
+<audio id="sound4" src="Riasztás Weboldal/vízszállító.ogg"></audio>
+<audio id="sound5" src="Riasztás Weboldal/emelő-kosaras (1).ogg"></audio>
+<audio id="sound6" src="Riasztás Weboldal/tartalék-fecskendő.ogg"></audio>
+<audio id="sound7" src="Riasztás Weboldal/műszaki-mentő.ogg"></audio>
+<audio id="sound8" src="Riasztás Weboldal/Kürt.mp3"></audio>
+<audio id="sound9" src="Riasztás Weboldal/Műszaki mentéshez.mp3"></audio>
+<audio id="sound10" src="Riasztás Weboldal/tűzesethez.mp3"></audio>
+<audio id="sound11" src="Riasztás Weboldal/uj világ.mp3"></audio>
+<audio id="sound12" src="Riasztás Weboldal/egy maréknyi.ogg"></audio>
+<audio id="sound13" src="Riasztás Weboldal/Karibb tenger.mp3"></audio>
+<audio id="sound14" src="Riasztás Weboldal/Váltás kezdete.mp3"></audio>
+<audio id="sound15" src="Riasztás Weboldal/Figyelem.mp3"></audio>
+<audio id="incomingAlertSound" src="file:///C:/Users/marto/Downloads/PAJZS%20riaszt%C3%A1s.mp3"></audio>
+
+<script>
+  const ALERT_STORAGE_KEY = "fzs_alert_records";
+  const LOGIN_STATE_KEY = "fzs_logged_in";
+  const VALID_USERNAME = "Luterán Márton";
+  const VALID_PASSWORD = "20110222";
+  const currentUser = "Felsőzsolca_ÖTE";
+  const lastLoginTime = localStorage.getItem('lastLogin') || 'Ismeretlen';
+  let currentAlertId = null;
+  let knownAlertCount = 0;
+  let alertSequenceRunning = false;
+
+  function showAppShell() {
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("appShell").classList.remove("hidden");
+    document.getElementById("loggedInUser").textContent = `Bejelentkezve: ${currentUser}`;
+    document.getElementById("lastLogin").textContent = `Utolsó bejelentkezés: ${localStorage.getItem('lastLogin') || lastLoginTime}`;
+  }
+
+  function showLoginScreen() {
+    document.getElementById("loginScreen").classList.remove("hidden");
+    document.getElementById("appShell").classList.add("hidden");
+  }
+
+  function showPanel(id) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function playSound(id) {
+    const s = document.getElementById(id);
+    s.currentTime = 0;
+    s.play();
+  }
+
+  function playAudioById(id) {
+    const audio = document.getElementById(id);
+    if (!audio) {
+      return Promise.resolve();
+    }
+
+    audio.currentTime = 0;
+
+    return new Promise((resolve) => {
+      const finish = () => {
+        audio.removeEventListener("ended", finish);
+        audio.removeEventListener("error", finish);
+        resolve();
+      };
+
+      audio.addEventListener("ended", finish, { once: true });
+      audio.addEventListener("error", finish, { once: true });
+
+      audio.play().catch(() => {
+        finish();
+      });
+    });
+  }
+
+  function getStoredAlerts() {
+    return JSON.parse(localStorage.getItem(ALERT_STORAGE_KEY) || "[]");
+  }
+
+  function setStoredAlerts(alerts) {
+    localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(alerts));
+  }
+
+  function formatAlertListItem(alert) {
+    const preview = alert.esemenyLeiras && alert.esemenyLeiras !== "-" ? alert.esemenyLeiras : alert.cim;
+    return `
+      <strong>${alert.karesetFajtaja} | Fokozat: ${alert.riasztasiFokozat}</strong>
+      <div class="alert-meta">${alert.createdAt}</div>
+      <div class="alert-preview">${preview || "-"}</div>
+    `;
+  }
+
+  function renderAlertDetail(alert) {
+    const detail = document.getElementById("alertDetail");
+    if (!alert) {
+      detail.className = "empty-alerts";
+      detail.textContent = "Még nincs kiválasztott riasztás.";
+      return;
+    }
+
+    const kategoriak = alert.kategoriak && alert.kategoriak.length ? alert.kategoriak.join(", ") : "-";
+    const szervek = alert.riasztottSzervek && alert.riasztottSzervek.length ? alert.riasztottSzervek.join("\n") : "-";
+
+    detail.className = "detail-grid";
+    detail.innerHTML = `
+      <div class="detail-row"><div class="detail-label">Káreset fajtája</div><div class="detail-value">${alert.karesetFajtaja}</div></div>
+      <div class="detail-row"><div class="detail-label">Kategóriák</div><div class="detail-value">${kategoriak}</div></div>
+      <div class="detail-row"><div class="detail-label">Riasztási fokozat</div><div class="detail-value">${alert.riasztasiFokozat}</div></div>
+      <div class="detail-row"><div class="detail-label">Esemény rövid leírása</div><div class="detail-value">${alert.esemenyLeiras}</div></div>
+      <div class="detail-row"><div class="detail-label">Eseményre riasztott szervek</div><div class="detail-value">${szervek}</div></div>
+      <div class="detail-row"><div class="detail-label">Életveszély</div><div class="detail-value">${alert.eletveszely}</div></div>
+      <div class="detail-row"><div class="detail-label">Megkülönböztető jelzés használata</div><div class="detail-value">${alert.jelzesHasznalata}</div></div>
+      <div class="detail-row"><div class="detail-label">Mit veszélyeztet</div><div class="detail-value">${alert.mitVeszelyeztet}</div></div>
+      <div class="detail-row"><div class="detail-label">Cím</div><div class="detail-value">${alert.cim}</div></div>
+      <div class="detail-row"><div class="detail-label">Település / szektor</div><div class="detail-value">${alert.telepulesSzektor}</div></div>
+    `;
+  }
+
+  function renderAlertList() {
+    const alertItems = document.getElementById("alertItems");
+    const alerts = getStoredAlerts();
+
+    if (!alerts.length) {
+      alertItems.innerHTML = `<div class="empty-alerts">Még nincs mentett riasztási lap.</div>`;
+      renderAlertDetail(null);
+      currentAlertId = null;
+      return;
+    }
+
+    if (!currentAlertId || !alerts.some((alert) => alert.id === currentAlertId)) {
+      currentAlertId = alerts[0].id;
+    }
+
+    alertItems.innerHTML = alerts.map((alert) => `
+      <div class="alert-item ${alert.id === currentAlertId ? "active" : ""}" data-alert-id="${alert.id}">
+        <button class="alert-open" type="button" data-alert-open="${alert.id}">
+          ${formatAlertListItem(alert)}
+        </button>
+        <button class="alert-delete" type="button" data-alert-delete="${alert.id}">Törlés</button>
+      </div>
+    `).join("");
+
+    alertItems.querySelectorAll("[data-alert-open]").forEach((button) => {
+      button.addEventListener("click", () => {
+        currentAlertId = button.dataset.alertOpen;
+        renderAlertList();
+      });
+    });
+
+    alertItems.querySelectorAll("[data-alert-delete]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const alertId = button.dataset.alertDelete;
+        const filteredAlerts = getStoredAlerts().filter((alert) => alert.id !== alertId);
+        setStoredAlerts(filteredAlerts);
+
+        if (currentAlertId === alertId) {
+          currentAlertId = filteredAlerts[0] ? filteredAlerts[0].id : null;
+        }
+
+        knownAlertCount = filteredAlerts.length;
+        renderAlertList();
+      });
+    });
+
+    renderAlertDetail(alerts.find((alert) => alert.id === currentAlertId) || alerts[0]);
+  }
+
+  function getUnitSoundIds(alert) {
+    const unitMap = {
+      "Felsőzsolca ÖTE/1": "sound1",
+      "Felsőzsolca ÖTE/2": "sound2",
+      "Felsőzsolca ÖTE/Emelő": "sound5",
+      "Felsőzsolca ÖTE/Erdő": "sound6"
+    };
+
+    return (alert.riasztottSzervek || [])
+      .map((entry) => entry.split(" - ")[0].trim())
+      .map((unitName) => unitMap[unitName])
+      .filter(Boolean);
+  }
+
+  function getIncidentModeSoundId(alert) {
+    return alert.karesetFajtaja === "Műszaki mentés" ? "sound9" : "sound10";
+  }
+
+  async function playIncomingAlertSound(alert) {
+    if (alertSequenceRunning) {
+      return;
+    }
+
+    alertSequenceRunning = true;
+
+    try {
+      await playAudioById("incomingAlertSound");
+      await playAudioById("sound12");
+      await playAudioById("sound15");
+      await playAudioById(getIncidentModeSoundId(alert));
+
+      const unitSoundIds = getUnitSoundIds(alert);
+      for (const soundId of unitSoundIds) {
+        await playAudioById(soundId);
+      }
+
+      await playAudioById("sound8");
+      await playAudioById("sound13");
+    } finally {
+      alertSequenceRunning = false;
+    }
+  }
+
+  function changeStatus(button) {
+    button.parentElement.querySelectorAll('.status-button')
+      .forEach(b => {
+        b.classList.remove('is-active');
+        b.dataset.active = "false";
+      });
+    button.classList.add('is-active');
+    button.dataset.active = "true";
+    updateReadyVehicleCount();
+  }
+
+  function initializeUnitRow(row) {
+    const buttons = row.querySelectorAll('.status-button');
+    if (!buttons.length) {
+      return;
+    }
+
+    buttons.forEach((button, index) => {
+      const isBaseReady = index === 0;
+      button.dataset.active = isBaseReady ? "true" : "false";
+      button.classList.toggle('is-active', isBaseReady);
+    });
+  }
+
+  function updateReadyVehicleCount() {
+    const rows = Array.from(document.querySelectorAll('#unitsTable tr')).slice(1);
+    const readyCount = rows.filter((row) => {
+      const activeButton = row.querySelector('.status-button[data-active="true"]');
+      return activeButton && activeButton.textContent.trim() === 'Bázison';
+    }).length;
+
+    document.getElementById('readyVehicleCount').textContent = String(readyCount);
+  }
+
+  function addUnitRow() {
+    const table = document.getElementById("unitsTable");
+    const row = table.insertRow();
+    row.innerHTML = `
+      <td><input type="text" value="Új egység"></td>
+      <td><input type="text" value="Feladat"></td>
+      <td>
+        <button class="status-button" style="background-color: green;" onclick="changeStatus(this)">Bázison</button>
+        <button class="status-button warning" style="background-color: yellow;" onclick="changeStatus(this)">Menetben</button>
+        <button class="status-button" style="background-color: red;" onclick="changeStatus(this)">Helyszínen</button>
+        <button class="status-button" style="background-color: black;" onclick="changeStatus(this)">Szolgálaton kívül</button>
+      </td>`;
+    initializeUnitRow(row);
+    updateReadyVehicleCount();
+  }
+
+  // TÉRKÉP – FELSŐZSOLCA, BEM JÓZSEF U. 12
+  document.addEventListener("DOMContentLoaded", () => {
+    const loginForm = document.getElementById("loginForm");
+    const loginError = document.getElementById("loginError");
+
+    loginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const username = document.getElementById("usernameInput").value.trim();
+      const password = document.getElementById("passwordInput").value;
+
+      if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+        localStorage.setItem(LOGIN_STATE_KEY, "true");
+        localStorage.setItem('lastLogin', new Date().toLocaleString());
+        loginError.textContent = "";
+        showAppShell();
+      } else {
+        loginError.textContent = "Hibás felhasználónév vagy jelszó.";
+      }
+    });
+
+    if (localStorage.getItem(LOGIN_STATE_KEY) === "true") {
+      showAppShell();
+    } else {
+      showLoginScreen();
+    }
+
+    knownAlertCount = getStoredAlerts().length;
+    renderAlertList();
+
+    document.querySelectorAll('#unitsTable tr').forEach((row, index) => {
+      if (index > 0) {
+        initializeUnitRow(row);
+      }
+    });
+    updateReadyVehicleCount();
+
+    const map = L.map('mapid').setView([48.1043, 20.8616], 17);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    L.marker([48.1043, 20.8616])
+      .addTo(map)
+      .bindPopup("<b>Felsőzsolca</b><br>Bem József utca 12")
+      .openPopup();
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key !== ALERT_STORAGE_KEY) {
+      return;
+    }
+
+    const alerts = getStoredAlerts();
+    if (alerts.length > knownAlertCount) {
+      currentAlertId = alerts[0].id;
+      playIncomingAlertSound(alerts[0]);
+    }
+
+    knownAlertCount = alerts.length;
+    renderAlertList();
+  });
+
+  // MIKROFON VISSZAJÁTSZÁS
+  let audioContext, micSource, micStream, isMicOn = false;
+
+  document.getElementById("toggleMicBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("toggleMicBtn");
+
+    if (!isMicOn) {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      micSource = audioContext.createMediaStreamSource(micStream);
+      micSource.connect(audioContext.destination);
+      isMicOn = true;
+      btn.textContent = "⏹️ Mikrofon leállítása";
+    } else {
+      micSource.disconnect();
+      micStream.getTracks().forEach(t => t.stop());
+      audioContext.close();
+      isMicOn = false;
+      btn.textContent = "🎙️ Mikrofon bekapcsolása";
+    }
+  });
+</script>
+
+</div>
+
+</body>
+</html>
