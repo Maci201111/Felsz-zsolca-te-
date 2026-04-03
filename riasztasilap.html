@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tűzoltósági Riasztási Lap</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --card: #ffffff;
+      --line: #d4dce6;
+      --text: #122033;
+      --muted: #536273;
+      --accent: #b10f1f;
+      --accent-dark: #83101a;
+      --accent-soft: #fff1f2;
+      --ok: #0f766e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(177, 15, 31, 0.12), transparent 26%),
+        linear-gradient(180deg, #f7f9fb 0%, #e9eef4 100%);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 18px 44px rgba(18, 32, 51, 0.12);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 28px 30px 20px;
+      background:
+        linear-gradient(135deg, rgba(177, 15, 31, 0.98), rgba(124, 9, 21, 0.98)),
+        linear-gradient(90deg, #7f1d1d, #991b1b);
+      color: #fff;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0.02em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px 20px;
+      padding: 28px 30px 32px;
+    }
+
+    .field,
+    .field-wide {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field-wide {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 15px;
+      color: var(--text);
+      background: #fff;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(177, 15, 31, 0.5);
+      box-shadow: 0 0 0 4px rgba(177, 15, 31, 0.12);
+    }
+
+    textarea {
+      min-height: 108px;
+      resize: vertical;
+    }
+
+    .readonly {
+      background: #f3f6f9;
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    details.dropdown {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    details.dropdown[open] {
+      box-shadow: 0 10px 24px rgba(18, 32, 51, 0.08);
+    }
+
+    details.dropdown summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      font-weight: 700;
+      color: var(--text);
+      background: linear-gradient(180deg, #fff, #fafbfd);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    details.dropdown summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .summary-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .summary-text small {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .summary-icon {
+      font-size: 18px;
+      transition: transform 0.2s ease;
+    }
+
+    details.dropdown[open] .summary-icon {
+      transform: rotate(180deg);
+    }
+
+    .dropdown-body {
+      padding: 14px 16px 16px;
+      border-top: 1px solid var(--line);
+      background: #fcfdff;
+    }
+
+    .search-box {
+      margin-bottom: 12px;
+    }
+
+    .options {
+      max-height: 260px;
+      overflow-y: auto;
+      border: 1px solid #e6ebf1;
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 10px;
+    }
+
+    .option-row:hover {
+      background: var(--accent-soft);
+    }
+
+    .option-row input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+      flex: 0 0 auto;
+    }
+
+    .selected-list {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: #eef4fb;
+      color: #12314e;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .timestamp-list {
+      margin-top: 12px;
+      border: 1px dashed #cbd6e2;
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    .timestamp-item {
+      color: var(--text);
+    }
+
+    .empty-text {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 8px;
+    }
+
+    .primary-btn {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(177, 15, 31, 0.24);
+    }
+
+    .primary-btn:hover {
+      filter: brightness(1.03);
+    }
+
+    .pdf-sheet {
+      width: 190mm;
+      padding: 0;
+      background: #ffffff;
+      color: #000000;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .pdf-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 12px;
+      line-height: 1.15;
+    }
+
+    .pdf-table th,
+    .pdf-table td {
+      border: 1px solid #000000;
+      padding: 6px 8px;
+      vertical-align: middle;
+      text-align: left;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .pdf-title {
+      background: #d9d9d9;
+      text-align: center !important;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 8px 6px !important;
+    }
+
+    .pdf-head {
+      background: #d9d9d9;
+      font-weight: 700;
+    }
+
+    .pdf-attr {
+      width: 33%;
+      font-weight: 400;
+    }
+
+    .pdf-value {
+      width: 67%;
+    }
+
+    .pdf-time {
+      display: block;
+      margin-top: 3px;
+      font-size: 10px;
+      font-weight: 400;
+    }
+
+    .pdf-empty {
+      color: #444444;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      left: -99999px;
+      top: 0;
+      visibility: visible;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 14px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+        padding: 20px 16px 24px;
+      }
+
+      .hero {
+        padding: 22px 16px 16px;
+      }
+
+      .actions {
+        justify-content: stretch;
+      }
+
+      .primary-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>Tűzoltósági Riasztási Lap</h1>
+      <p>Kitölthető, kereshető és PDF-be exportálható riasztási adatlap.</p>
+    </div>
+
+    <form class="form-grid" id="riasztasiForm">
+      <div class="field">
+        <label for="karesetFajtaja">Káreset fajtája</label>
+        <select id="karesetFajtaja">
+          <option value="Tüzeset">Tüzeset</option>
+          <option value="Műszaki mentés">Műszaki mentés</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="riasztasiFokozat">Riasztási fokozat</label>
+        <select id="riasztasiFokozat">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+
+      <div class="field-wide">
+        <label>Kategóriák</label>
+        <details class="dropdown">
+          <summary>
+            <span class="summary-text">
+              <span id="kategoriakSummary">Válassz kategóriát</span>
+              <small>Több elem is kijelölhető</small>
+            </span>
+            <span class="summary-icon">⌄</span>
+          </summary>
+          <div class="dropdown-body">
+            <input class="search-box" id="kategoriakSearch" type="text" placeholder="Keresés kategóriák között...">
+            <div class="options" id="kategoriakOptions"></div>
+            <div class="selected-list" id="kategoriakSelected"></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="field-wide">
+        <label for="esemenyLeiras">Esemény rövid leírása</label>
+        <textarea id="esemenyLeiras" placeholder="Írd le röviden az eseményt..."></textarea>
+      </div>
+
+      <div class="field-wide">
+        <label>Eseményre riasztott szervek</label>
+        <details class="dropdown">
+          <summary>
+            <span class="summary-text">
+              <span id="szervekSummary">Válassz riasztott szervet</span>
+              <small>Több szerv is kijelölhető riasztásra</small>
+            </span>
+            <span class="summary-icon">⌄</span>
+          </summary>
+          <div class="dropdown-body">
+            <input class="search-box" id="szervekSearch" type="text" placeholder="Keresés szervek között...">
+            <div class="options" id="szervekOptions"></div>
+            <div class="timestamp-list" id="szervekSelected"></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="field">
+        <label for="eletveszely">Életveszély</label>
+        <select id="eletveszely">
+          <option value="Igen">Igen</option>
+          <option value="Nem" selected>Nem</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="jelzesHasznalata">Megkülönböztető jelzés használata</label>
+        <input id="jelzesHasznalata" class="readonly" type="text" value="Igen" readonly>
+      </div>
+
+      <div class="field-wide">
+        <label for="mitVeszelyeztet">Mit veszélyeztet</label>
+        <textarea id="mitVeszelyeztet" placeholder="Pl. lakóépület, közlekedés, erdősáv, személyi biztonság..."></textarea>
+      </div>
+
+      <div class="field-wide">
+        <label for="cim">Cím</label>
+        <input id="cim" type="text" placeholder="Pontos cím">
+      </div>
+
+      <div class="field">
+        <label for="telepulesSzektor">Település / szektor</label>
+        <input id="telepulesSzektor" type="text" placeholder="Pl. Felsőzsolca / 2. szektor">
+      </div>
+
+      <div class="actions">
+        <button class="primary-btn" type="button" id="pdfBtn">PDF készítése</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const ALERT_STORAGE_KEY = "fzs_alert_records";
+    const kategoriakLista = [
+      "Autópálya",
+      "Avar",
+      "Betegmozgatás",
+      "CO szivárgás",
+      "Családiházi",
+      "Egy lakás",
+      "Egyéb",
+      "Elemi csapás",
+      "Elfolyások",
+      "Emeletes",
+      "Fa kidőlés",
+      "Földszintes",
+      "Forgalmat akadályoz",
+      "Forgalmat nem akadályoz",
+      "Frogalmat akadályoz",
+      "Füstölés",
+      "Gáz",
+      "Gyári",
+      "Kéménytűz",
+      "Két lakás",
+      "Közlekedés",
+      "Közlekedési baleset",
+      "Közúti",
+      "Kultúra/Szórakoztatás",
+      "Lakossági",
+      "Lakóházi",
+      "Manuális jelzés",
+      "Mezőgazdasági",
+      "Nádas",
+      "Segítség nyújtás",
+      "Személygépkocsi",
+      "Szivárgás",
+      "Tarló",
+      "Tehergépkocsi",
+      "Több lakás",
+      "Tűzjelző"
+    ].sort((a, b) => a.localeCompare(b, "hu"));
+
+    const szervekLista = [
+      "Felsőzsolca ÖTE/1",
+      "Felsőzsolca ÖTE/2",
+      "Felsőzsolca ÖTE/Erdő",
+      "Felsőzsolca ÖTE/Emelő"
+    ].sort((a, b) => a.localeCompare(b, "hu"));
+
+    const kategoriakKivalasztva = new Set();
+    const riasztasiIdopontok = {};
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatTimestamp(date) {
+      const pad = (num) => String(num).padStart(2, "0");
+      return [
+        date.getFullYear(),
+        pad(date.getMonth() + 1),
+        pad(date.getDate())
+      ].join("-") + " " + [
+        pad(date.getHours()),
+        pad(date.getMinutes()),
+        pad(date.getSeconds())
+      ].join(":");
+    }
+
+    function buildMultiSelect(config) {
+      const {
+        list,
+        optionsId,
+        searchId,
+        summaryId,
+        selectedId,
+        emptyText,
+        withTimestamps = false
+      } = config;
+
+      const optionsEl = document.getElementById(optionsId);
+      const searchEl = document.getElementById(searchId);
+      const summaryEl = document.getElementById(summaryId);
+      const selectedEl = document.getElementById(selectedId);
+      const selectedState = withTimestamps ? riasztasiIdopontok : kategoriakKivalasztva;
+
+      function renderOptions(filter = "") {
+        const normalized = filter.trim().toLocaleLowerCase("hu");
+        const filtered = list.filter((item) => item.toLocaleLowerCase("hu").includes(normalized));
+
+        optionsEl.innerHTML = filtered.length
+          ? filtered.map((item) => {
+              const checked = withTimestamps
+                ? Boolean(selectedState[item])
+                : selectedState.has(item);
+              return `
+                <label class="option-row">
+                  <input type="checkbox" value="${escapeHtml(item)}" ${checked ? "checked" : ""}>
+                  <span>${escapeHtml(item)}</span>
+                </label>
+              `;
+            }).join("")
+          : `<div class="empty-text">Nincs találat.</div>`;
+
+        optionsEl.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+          checkbox.addEventListener("change", (event) => {
+            const value = event.target.value;
+
+            if (withTimestamps) {
+              if (event.target.checked) {
+                if (!selectedState[value]) {
+                  selectedState[value] = formatTimestamp(new Date());
+                }
+              } else {
+                delete selectedState[value];
+              }
+            } else if (event.target.checked) {
+              selectedState.add(value);
+            } else {
+              selectedState.delete(value);
+            }
+
+            updateSelected();
+            renderOptions(searchEl.value);
+          });
+        });
+      }
+
+      function getSelectedValues() {
+        if (withTimestamps) {
+          return Object.keys(selectedState);
+        }
+
+        return Array.from(selectedState);
+      }
+
+      function updateSelected() {
+        const selected = withTimestamps ? Object.keys(riasztasiIdopontok) : getSelectedValues();
+
+        summaryEl.textContent = selected.length
+          ? `${selected.length} elem kiválasztva`
+          : emptyText;
+
+        if (!selected.length) {
+          selectedEl.innerHTML = `<span class="empty-text">${emptyText}</span>`;
+          return;
+        }
+
+        if (withTimestamps) {
+          selectedEl.innerHTML = selected
+            .map((item) => `<div class="timestamp-item">${escapeHtml(item)} - ${selectedState[item]}</div>`)
+            .join("");
+          return;
+        }
+
+        selectedEl.innerHTML = selected
+          .map((item) => `<span class="chip">${escapeHtml(item)}</span>`)
+          .join("");
+      }
+
+      searchEl.addEventListener("input", () => renderOptions(searchEl.value));
+
+      renderOptions();
+      updateSelected();
+
+      return {
+        getSelectedValues,
+        getTimestampedValues: () => Object.keys(selectedState).map((item) => `${item} - ${selectedState[item]}`)
+      };
+    }
+
+    const kategoriakSelect = buildMultiSelect({
+      list: kategoriakLista,
+      optionsId: "kategoriakOptions",
+      searchId: "kategoriakSearch",
+      summaryId: "kategoriakSummary",
+      selectedId: "kategoriakSelected",
+      emptyText: "Válassz kategóriát"
+    });
+
+    const szervekSelect = buildMultiSelect({
+      list: szervekLista,
+      optionsId: "szervekOptions",
+      searchId: "szervekSearch",
+      summaryId: "szervekSummary",
+      selectedId: "szervekSelected",
+      emptyText: "Válassz riasztott szervet",
+      withTimestamps: true
+    });
+
+    function buildPdfRows() {
+      return [
+        ["Káreset fajtája", document.getElementById("karesetFajtaja").value],
+        ["Kategóriák", kategoriakSelect.getSelectedValues().join(", ") || "-"],
+        ["Riasztási fokozat", document.getElementById("riasztasiFokozat").value],
+        ["Esemény rövid leírása", document.getElementById("esemenyLeiras").value || "-"],
+        ["Eseményre riasztott szervek", szervekSelect.getTimestampedValues().join("\n") || "-"],
+        ["Életveszély", document.getElementById("eletveszely").value],
+        ["Megkülönböztető jelzés használata", "Igen"],
+        ["Mit veszélyeztet", document.getElementById("mitVeszelyeztet").value || "-"],
+        ["Cím", document.getElementById("cim").value || "-"],
+        ["Település / szektor", document.getElementById("telepulesSzektor").value || "-"]
+      ];
+    }
+
+    function buildAlertRecord() {
+      return {
+        id: `alert-${Date.now()}`,
+        createdAt: formatTimestamp(new Date()),
+        karesetFajtaja: document.getElementById("karesetFajtaja").value,
+        kategoriak: kategoriakSelect.getSelectedValues(),
+        riasztasiFokozat: document.getElementById("riasztasiFokozat").value,
+        esemenyLeiras: document.getElementById("esemenyLeiras").value || "-",
+        riasztottSzervek: szervekSelect.getTimestampedValues(),
+        eletveszely: document.getElementById("eletveszely").value,
+        jelzesHasznalata: "Igen",
+        mitVeszelyeztet: document.getElementById("mitVeszelyeztet").value || "-",
+        cim: document.getElementById("cim").value || "-",
+        telepulesSzektor: document.getElementById("telepulesSzektor").value || "-"
+      };
+    }
+
+    function saveAlertRecord(record) {
+      const existing = JSON.parse(localStorage.getItem(ALERT_STORAGE_KEY) || "[]");
+      existing.unshift(record);
+      localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(existing.slice(0, 50)));
+    }
+
+    function createPdfTemplate() {
+      const wrapper = document.createElement("div");
+      wrapper.className = "visually-hidden";
+
+      const sheet = document.createElement("div");
+      sheet.className = "pdf-sheet";
+
+      const table = document.createElement("table");
+      table.className = "pdf-table";
+
+      const titleRow = document.createElement("tr");
+      const titleCell = document.createElement("th");
+      titleCell.className = "pdf-title";
+      titleCell.colSpan = 2;
+      titleCell.innerHTML = `
+        Riasztási lap
+        <span class="pdf-time">Készítés ideje: ${formatTimestamp(new Date())}</span>
+      `;
+      titleRow.appendChild(titleCell);
+      table.appendChild(titleRow);
+
+      const headRow = document.createElement("tr");
+      headRow.innerHTML = `
+        <th class="pdf-head pdf-attr">Attribútum</th>
+        <th class="pdf-head pdf-value">Érték</th>
+      `;
+      table.appendChild(headRow);
+
+      buildPdfRows().forEach(([label, value]) => {
+        const row = document.createElement("tr");
+
+        const labelCell = document.createElement("td");
+        labelCell.className = "pdf-attr";
+        labelCell.textContent = label;
+
+        const valueCell = document.createElement("td");
+        valueCell.className = "pdf-value";
+        valueCell.textContent = value && String(value).trim() ? value : "-";
+
+        if (!value || !String(value).trim()) {
+          valueCell.classList.add("pdf-empty");
+        }
+
+        row.appendChild(labelCell);
+        row.appendChild(valueCell);
+        table.appendChild(row);
+      });
+
+      sheet.appendChild(table);
+
+      wrapper.appendChild(sheet);
+      document.body.appendChild(wrapper);
+      return wrapper;
+    }
+
+    function generatePDF() {
+      const alertRecord = buildAlertRecord();
+      saveAlertRecord(alertRecord);
+
+      const templateRoot = createPdfTemplate();
+      const pdfContent = templateRoot.querySelector(".pdf-sheet");
+      const { jsPDF } = window.jspdf;
+      html2canvas(pdfContent, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff"
+      }).then((canvas) => {
+        const doc = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4"
+        });
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 6;
+        const usableWidth = pageWidth - margin * 2;
+        const usableHeight = pageHeight - margin * 2;
+        const imageWidth = usableWidth;
+        const imageHeight = (canvas.height * imageWidth) / canvas.width;
+
+        if (imageHeight <= usableHeight) {
+          doc.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, imageWidth, imageHeight, undefined, "FAST");
+        } else {
+          const scale = usableHeight / imageHeight;
+          const fittedWidth = imageWidth * scale;
+          doc.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, fittedWidth, usableHeight, undefined, "FAST");
+        }
+
+        doc.save("tuzoltosagi_riasztasi_lap.pdf");
+      }).finally(() => {
+        templateRoot.remove();
+      });
+    }
+
+    document.getElementById("pdfBtn").addEventListener("click", generatePDF);
+  </script>
+</body>
+</html>
